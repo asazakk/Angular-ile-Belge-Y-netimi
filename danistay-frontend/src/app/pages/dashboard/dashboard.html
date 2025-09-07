@@ -1,0 +1,174 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <mat-toolbar color="primary" class="dashboard-header">
+    <span>Danıştay Belge Yönetim Sistemi</span>
+    <span class="spacer"></span>
+    <span *ngIf="currentUser">Hoş geldiniz, {{ currentUser.firstName }} {{ currentUser.lastName }}</span>
+    <button mat-icon-button [matMenuTriggerFor]="menu">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item (click)="viewProfile()">
+        <mat-icon>person</mat-icon>
+        <span>Profil</span>
+      </button>
+      <button mat-menu-item (click)="changePassword()">
+        <mat-icon>lock</mat-icon>
+        <span>Şifre Değiştir</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Çıkış Yap</span>
+      </button>
+    </mat-menu>
+  </mat-toolbar>
+
+  <!-- Main Content -->
+  <div class="dashboard-content">
+    <div class="content-grid">
+      <!-- Statistics Cards -->
+      <div class="stats-row">
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <mat-icon>description</mat-icon>
+              </div>
+              <div class="stat-info">
+                <h3>{{ totalDocuments }}</h3>
+                <p>Toplam Belge</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <div class="stat-icon pending">
+                <mat-icon>hourglass_empty</mat-icon>
+              </div>
+              <div class="stat-info">
+                <h3>{{ pendingDocuments }}</h3>
+                <p>Bekleyen Belgeler</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <div class="stat-icon approved">
+                <mat-icon>check_circle</mat-icon>
+              </div>
+              <div class="stat-info">
+                <h3>{{ approvedDocuments }}</h3>
+                <p>Onaylanan Belgeler</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <div class="stat-icon rejected">
+                <mat-icon>cancel</mat-icon>
+              </div>
+              <div class="stat-info">
+                <h3>{{ rejectedDocuments }}</h3>
+                <p>Reddedilen Belgeler</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Recent Documents -->
+      <mat-card class="recent-documents-card">
+        <mat-card-header>
+          <mat-card-title>Son Belgeler</mat-card-title>
+          <div class="spacer"></div>
+          <button mat-raised-button color="primary" (click)="createDocument()">
+            <mat-icon>add</mat-icon>
+            Yeni Belge
+          </button>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="isLoadingDocuments" class="loading-container">
+            <mat-spinner diameter="50"></mat-spinner>
+          </div>
+          <div *ngIf="!isLoadingDocuments && recentDocuments.length === 0" class="no-documents">
+            <mat-icon>description</mat-icon>
+            <p>Henüz belge bulunmamaktadır.</p>
+          </div>
+          <mat-table *ngIf="!isLoadingDocuments && recentDocuments.length > 0" [dataSource]="recentDocuments" class="documents-table">
+            <!-- Title Column -->
+            <ng-container matColumnDef="title">
+              <mat-header-cell *matHeaderCellDef>Başlık</mat-header-cell>
+              <mat-cell *matCellDef="let document">{{ document.title }}</mat-cell>
+            </ng-container>
+
+            <!-- Type Column -->
+            <ng-container matColumnDef="type">
+              <mat-header-cell *matHeaderCellDef>Tür</mat-header-cell>
+              <mat-cell *matCellDef="let document">{{ getDocumentTypeText(document.documentType) }}</mat-cell>
+            </ng-container>
+
+            <!-- Status Column -->
+            <ng-container matColumnDef="status">
+              <mat-header-cell *matHeaderCellDef>Durum</mat-header-cell>
+              <mat-cell *matCellDef="let document">
+                <mat-chip [class]="'status-chip-' + document.status">{{ getDocumentStatusText(document.status) }}</mat-chip>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Created Date Column -->
+            <ng-container matColumnDef="createdAt">
+              <mat-header-cell *matHeaderCellDef>Oluşturulma Tarihi</mat-header-cell>
+              <mat-cell *matCellDef="let document">{{ document.createdAt | date:'dd/MM/yyyy HH:mm' }}</mat-cell>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef>İşlemler</mat-header-cell>
+              <mat-cell *matCellDef="let document">
+                <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matMenuTriggerData]="{document: document}">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+              </mat-cell>
+            </ng-container>
+
+            <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+          </mat-table>
+
+          <!-- Action Menu -->
+          <mat-menu #actionMenu="matMenu">
+            <ng-template matMenuContent let-document="document">
+              <button mat-menu-item (click)="viewDocument(document)">
+                <mat-icon>visibility</mat-icon>
+                <span>Görüntüle</span>
+              </button>
+              <button mat-menu-item (click)="editDocument(document)">
+                <mat-icon>edit</mat-icon>
+                <span>Düzenle</span>
+              </button>
+              <button mat-menu-item (click)="downloadDocument(document)">
+                <mat-icon>download</mat-icon>
+                <span>İndir</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="deleteDocument(document)" class="delete-action">
+                <mat-icon>delete</mat-icon>
+                <span>Sil</span>
+              </button>
+            </ng-template>
+          </mat-menu>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
